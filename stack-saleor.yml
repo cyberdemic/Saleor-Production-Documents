@@ -1,0 +1,290 @@
+version: '3.7'
+
+x-default-opts:
+  &default-opts
+  logging:
+    options:
+      max-size: "1m"
+
+volumes:
+  saleor-redis:
+
+networks:
+  saleor-backend-tier:
+    driver: overlay 
+  traefik-public:
+    external: true
+
+secrets:  
+  secret_key:
+    external: true
+
+configs:
+  redis_config:
+    file: ./redis.conf
+
+services:
+  api:
+    <<: *default-opts
+    build:
+      context: ./saleor
+      dockerfile: ./Dockerfile
+      args:
+        STATIC_URL: '/static/'
+    image: docker_hub_name/api_image_name 
+    networks:
+      - saleor-backend-tier
+      - traefik-public
+    depends_on:
+      - redis
+    secrets:
+      - secret_key
+    volumes:
+      - /app/saleor/static/assets
+      - /app/templates/templated_email/compiled
+    environment:
+      ALLOWED_CLIENT_HOSTS: example.com
+      # Images hosted on AWS or DigitalOcean
+      AWS_MEDIA_BUCKET_NAME: media-bucket-name
+      AWS_STORAGE_BUCKET_NAME: static-bucket-name
+      AWS_QUERYSTRING_AUTH: "True"
+      AWS_S3_REGION_NAME: bucket-region(e.g. sfo3)
+      AWS_S3_ENDPOINT_URL:  https://sfo3.digitaloceanspaces.com
+      AWS_ACCESS_KEY_ID: access-key
+      AWS_SECRET_ACCESS_KEY: secret-key
+      CACHE_URL: redis://redis:6379/0
+      # Format: redis://:password@redis:6379/1
+      # Password in redis.conf (make sure to change it here and worker in service) 
+      CELERY_BROKER_URL: redis://:kljfsdfiouFOIDSUF789s8dfSDFjksd@redis:6379/1 
+      DATABASE_URL:  postgresql://${DO_DB_USER}:${DO_DB_PASSWORD}@host:port/dbname/sslmode=require
+      DEFAULT_FROM_EMAIL: noreply@example.com 
+      EMAIL_URL: smtp://${GMAIL_USERNAME}:${GMAIL_PASSWORD}@smtp.gmail.com:465/?ssl=True
+      SECRET_KEY: /run/secrets/secret_key
+      SENTRY_DSN:
+    command: python manage.py runserver 0.0.0.0:8000
+    deploy:
+      replicas: 3
+      mode: replicated
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+        window: 60s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+      # TODO: optimize limits
+      resources:
+        limits:
+          cpus: '0.45'
+          memory: 400M 
+        reservations:
+          cpus: '0.1'
+          memory: 200M
+      labels:
+        traefik.enable: "true"
+        traefik.docker.network: traefik-public
+        traefik.constraint-label: traefik-public
+        # Can't use /api if traefik(proxy) is on same domain as it uses /api AND /dashboard
+        traefik.http.routers.api-http.rule: Host(`example.com`) && PathPrefix(`/gqlapi`)
+        traefik.http.routers.api-http.entrypoints: http
+        traefik.http.routers.api-http.middlewares: https-redirect
+        traefik.http.routers.api-https.rule: Host(`example.com`) && PathPrefix(`/gqlapi`)
+        traefik.http.routers.api-https.entrypoints: https
+        traefik.http.routers.api-https.tls: "true"
+        traefik.http.routers.api-https.tls.certresolver: le
+        traefik.http.services.api.loadbalancer.server.port: 8000
+        traefik.http.middlewares.stripprefix-gqlapi.stripprefix.prefixes: /gqlapi
+        # Security Headers
+        traefik.http.middlewares.api-headers.headers.framedeny: "true"
+        traefik.http.middlewares.api-headers.headers.sslredirect: "true"
+        traefik.http.middlewares.api-headers.headers.forceSTSHeader: "true"
+        traefik.http.routers.api-https.middlewares: api-headers,stripprefix-gqlapi@docker
+
+
+  storefront:
+    <<: *default-opts
+    build:
+      context: ./saleor-storefront
+      dockerfile: ./Dockerfile
+    image: docker_hub_name/storefront_image_name 
+    environment:
+      API_URI: "https://example.com/gqlapi/graphql/"
+    networks:
+      - traefik-public
+    volumes:
+      - /app/node_modules/
+    deploy:
+      replicas: 3 
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+        window: 60s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+      # TODO: Add resource limits
+      labels:
+        traefik.enable: "true"
+        traefik.docker.network: traefik-public
+        traefik.constraint-label: traefik-public
+        traefik.http.routers.storefront-http.rule: Host(`example.com`)
+        traefik.http.routers.storefront-http.entrypoints: http
+        traefik.http.routers.storefront-http.middlewares: https-redirect
+        traefik.http.routers.storefront-https.rule: Host(`example.com`)
+        traefik.http.routers.storefront-https.entrypoints: https
+        traefik.http.routers.storefront-https.tls: "true"
+        traefik.http.routers.storefront-https.tls.certresolver: le
+        traefik.http.services.storefront.loadbalancer.server.port: 3000
+        # Security Headers
+        traefik.http.middlewares.storefront-headers.headers.framedeny: "true"
+        traefik.http.middlewares.storefront-headers.headers.sslredirect: "true"
+        traefik.http.middlewares.storefront-headers.headers.forceSTSHeader: "true"
+        traefik.http.routers.storefront-https.middlewares: storefront-headers,admin-auth
+
+
+  dashboard:
+    <<: *default-opts
+    build:
+      context: ./saleor-dashboard
+      dockerfile: ./Dockerfile
+    image: docker_hub_name/dashboard_image_name 
+    environment:
+      API_URI: "https://example.com/gqlapi/graphql/"
+      # Not using dashboard due to proxy using /dashboard/
+      # Change /admin/ to less conspicuous name for security
+      APP_MOUNT_URI: "/admin/" 
+      STATIC_URL: "/admin/" 
+    volumes:
+      - /app/node_modules/
+    networks:
+      - traefik-public
+    deploy:
+      replicas: 3 
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+        window: 60s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+      # TODO: Add resource limits
+      labels:
+        traefik.enable: "true"
+        traefik.docker.network: traefik-public
+        traefik.constraint-label: traefik-public
+        traefik.http.routers.dashboard-http.rule: Host(`example.com`) && PathPrefix(`/admin`)
+        traefik.http.routers.dashboard-http.entrypoints: http
+        traefik.http.routers.dashboard-http.middlewares: https-redirect
+        traefik.http.routers.dashboard-https.rule: Host(`example.com`) && PathPrefix(`/admin`)
+        traefik.http.routers.dashboard-https.entrypoints: https
+        traefik.http.routers.dashboard-https.tls: "true"
+        traefik.http.routers.dashboard-https.tls.certresolver: le
+        traefik.http.services.dashboard.loadbalancer.server.port: 9005
+        traefik.http.middlewares.stripprefix-admin.stripprefix.prefixes: /admin
+        # Security Headers
+        traefik.http.middlewares.dashboard-headers.headers.framedeny: "true"
+        traefik.http.middlewares.dashboard-headers.headers.sslredirect: "true"
+        traefik.http.middlewares.dashboard-headers.headers.forceSTSHeader: "true"
+        traefik.http.routers.dashboard-https.middlewares: dashboard-headers,admin-auth,stripprefix-admin@docker
+
+
+  redis:
+    <<: *default-opts
+    image: redis:6.0-alpine
+    ports:
+      - target: 6379
+        published: 6379
+        protocol: tcp
+        mode: ingress
+    networks:
+      - saleor-backend-tier
+    volumes:
+      - type: bind
+        source: /gluster/volume1/saleor-redis
+        target: /home/docker/data
+    configs:
+      - source: redis_config
+        target: /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli PING || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+    command: "redis-server /usr/local/etc/redis/redis.conf"
+    deploy:
+      placement: 
+        constraints:
+          - node.role == manager  
+      replicas: 3  
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+        window: 60s
+      # TODO: Optimize resource limits
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 200M
+        reservations:
+          cpus: '0.1'
+          memory: 50M
+
+
+  worker:
+    <<: *default-opts
+    build:
+      context: ./saleor
+      dockerfile: ./Dockerfile
+      args:
+        STATIC_URL: '/static/'
+    image: docker_hub_name/api_image_name 
+    command: celery -A saleor worker --app=saleor.celeryconf:app --loglevel=info
+    networks:
+      - saleor-backend-tier
+    depends_on:
+      - redis
+    secrets:
+      - secret_key
+    volumes:
+      - /app/templates/templated_email/compiled
+    environment:
+      ALLOWED_CLIENT_HOSTS: example.com
+      DATABASE_URL:  postgresql://${DO_DB_USER}:${DO_DB_PASSWORD}@host:port/dbname/sslmode=require
+      EMAIL_URL: smtp://${GMAIL_USERNAME}:${GMAIL_PASSWORD}@smtp.gmail.com:465/?ssl=True
+      DEFAULT_FROM_EMAIL: noreply@example.com
+      CACHE_URL: redis://redis:6379/0  
+      # Format: redis://:password@redis:6379/1
+      # Password in redis.conf  
+      CELERY_BROKER_URL: redis://:kljfsdfiouFOIDSUF789s8dfSDFjksd@redis:6379/1
+      SECRET_KEY: /run/secrets/secret_key
+      JWT_VERIFY_EXPIRATION: "True"
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+        window: 60s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+      # TODO: Optimize resource limits
+      resources:
+        limits:
+          cpus: '0.45'
+          memory: 350M
+        reservations:
+          cpus: '0.10'
+          memory: 50M
