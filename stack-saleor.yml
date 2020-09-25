@@ -54,7 +54,7 @@ services:
       AWS_SECRET_ACCESS_KEY: secret-key
       CACHE_URL: redis://redis:6379/0
       # Format: redis://:password@redis:6379/1
-      # Password in redis.conf (make sure to change it here and worker in service) 
+      # Password in redis.conf (make sure to change it in redis.conf, here and worker in service) 
       CELERY_BROKER_URL: redis://:kljfsdfiouFOIDSUF789s8dfSDFjksd@redis:6379/1 
       DATABASE_URL:  postgresql://${DO_DB_USER}:${DO_DB_PASSWORD}@host:port/dbname/sslmode=require
       DEFAULT_FROM_EMAIL: noreply@example.com 
