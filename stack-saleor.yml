@@ -185,7 +185,7 @@ services:
         traefik.http.routers.dashboard-https.entrypoints: https
         traefik.http.routers.dashboard-https.tls: "true"
         traefik.http.routers.dashboard-https.tls.certresolver: le
-        traefik.http.services.dashboard.loadbalancer.server.port: 9005
+        traefik.http.services.dashboard.loadbalancer.server.port: 9000
         traefik.http.middlewares.stripprefix-admin.stripprefix.prefixes: /admin
         # Security Headers
         traefik.http.middlewares.dashboard-headers.headers.framedeny: "true"
