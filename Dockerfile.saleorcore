@@ -15,8 +15,7 @@ RUN pip install -r requirements.txt
 ### Final image
 FROM python:3.8-slim
 
-RUN groupadd --system saleor && useradd --system --gid saleor saleor && \
-  groupadd example && useradd --gid example example
+RUN groupadd --system saleor && useradd --system --gid saleor saleor
 
 
 RUN apt-get update \
@@ -50,9 +49,6 @@ ENV SECRET_KEY ${SECRET_KEY:-dummy}
 
 RUN chmod -R 755 /app/ && \
   SECRET_KEY=${SECRET_KEY} STATIC_URL=${STATIC_URL} python3 manage.py collectstatic --no-input
-
-# Permission isue: Comment out, update stack, apply migrations, and uncomment
-USER example
 
 EXPOSE 8000
 ENV PYTHONUNBUFFERED 1
