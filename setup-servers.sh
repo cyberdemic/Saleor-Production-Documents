@@ -135,8 +135,8 @@ docker-machine ssh ${do_manager} <<'EOF'
     echo "localhost:/staging-gfs /mnt glusterfs defaults,_netdev,backupvolfile-server=localhost 0 0" >> /etc/fstab && \
     mount.glusterfs localhost:/staging-gfs /mnt && \
     echo && echo "$HOSTNAME volumes:" && df -h;
-    mkdir /mnt/saleor-redis /mnt/portainer-data /mnt/traefik-public-certificates && \
-    chmod 777 /mnt/saleor-redis /mnt/portainer-data /mnt/traefik-public-certificates;
+    mkdir /mnt/saleor-redis /mnt/traefik-public-certificates && \
+    chmod 777 /mnt/saleor-redis /mnt/traefik-public-certificates;
 EOF
 
 # Create the swarm
