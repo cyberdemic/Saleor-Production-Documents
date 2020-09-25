@@ -1,0 +1,5 @@
+{
+  "userns-remap": "default",
+  "userland-proxy": false,
+  "no-new-privileges": true
+}
