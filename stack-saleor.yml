@@ -50,8 +50,8 @@ services:
       AWS_QUERYSTRING_AUTH: "True"
       AWS_S3_REGION_NAME: bucket-region(e.g. sfo3)
       AWS_S3_ENDPOINT_URL:  https://sfo3.digitaloceanspaces.com
-      AWS_ACCESS_KEY_ID: access-key
-      AWS_SECRET_ACCESS_KEY: secret-key
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       CACHE_URL: redis://redis:6379/0
       # Format: redis://:password@redis:6379/1
       # Password in redis.conf (make sure to change it in redis.conf, here and worker in service) 
