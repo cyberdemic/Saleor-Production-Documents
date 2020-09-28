@@ -11,7 +11,8 @@ server_ips=() # Holds IPs for Glusterfs setup
 # ------------------- #
 
 if [ -z $DO_TOKEN ] || [ -z $DO_SIZE ] || [ -z $SSH_FINGERPRINT ] || [ -z $DO_REGION ]; then
-    echo "Please make sure all environment variables are properly set."
+    echo "Please make sure the following environment variables are properly set:"
+    echo "DO_TOKEN, DO_SIZE, SSH_FINGERPRINT, DO_REGION"
     exit 1
 fi
 
@@ -76,8 +77,7 @@ for server in $do_servers; do
     ssh-keyscan -H "$url" >>~/.ssh/known_hosts
     docker-machine ssh ${server} <<'EOF'
     apt-get --assume-yes update && apt-get --assume-yes dist-upgrade && \
-    echo fs.inotify.max_user_watches=1048576 | tee -a /etc/sysctl.conf && \
-    echo vm.max_map_count=262144 | tee -a /etc/sysctl.conf && sysctl -p && \
+    echo fs.inotify.max_user_watches=1048576 | tee -a /etc/sysctl.conf && sysctl -p && \
     apt-get --assume-yes purge do-agent && \
     curl -sSL https://repos.insights.digitalocean.com/install.sh | sudo bash && \
     usermod -aG docker $USER && newgrp docker && \

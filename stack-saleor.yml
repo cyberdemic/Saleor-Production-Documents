@@ -15,10 +15,6 @@ networks:
   traefik-public:
     external: true
 
-secrets:  
-  secret_key:
-    external: true
-
 configs:
   redis_config:
     file: ./redis.conf
@@ -37,8 +33,6 @@ services:
       - traefik-public
     depends_on:
       - redis
-    secrets:
-      - secret_key
     volumes:
       - /app/saleor/static/assets
       - /app/templates/templated_email/compiled
@@ -59,7 +53,7 @@ services:
       DATABASE_URL:  postgresql://${DO_DB_USER}:${DO_DB_PASSWORD}@host:port/dbname/sslmode=require
       DEFAULT_FROM_EMAIL: noreply@example.com 
       EMAIL_URL: smtp://${GMAIL_USERNAME}:${GMAIL_PASSWORD}@smtp.gmail.com:465/?ssl=True
-      SECRET_KEY: /run/secrets/secret_key
+      SECRET_KEY: ${SECRET_KEY}
       SENTRY_DSN:
     command: python manage.py runserver 0.0.0.0:8000
     deploy:
@@ -86,7 +80,6 @@ services:
         traefik.enable: "true"
         traefik.docker.network: traefik-public
         traefik.constraint-label: traefik-public
-        # Can't use /api if traefik(proxy) is on same domain as it uses /api AND /dashboard
         traefik.http.routers.api-http.rule: Host(`example.com`) && PathPrefix(`/gqlapi`)
         traefik.http.routers.api-http.entrypoints: http
         traefik.http.routers.api-http.middlewares: https-redirect
@@ -178,15 +171,15 @@ services:
         traefik.enable: "true"
         traefik.docker.network: traefik-public
         traefik.constraint-label: traefik-public
-        traefik.http.routers.dashboard-http.rule: Host(`example.com`) && PathPrefix(`/admin`)
+        traefik.http.routers.dashboard-http.rule: Host(`example.com`) && PathPrefix(`/dashboard`)
         traefik.http.routers.dashboard-http.entrypoints: http
         traefik.http.routers.dashboard-http.middlewares: https-redirect
-        traefik.http.routers.dashboard-https.rule: Host(`example.com`) && PathPrefix(`/admin`)
+        traefik.http.routers.dashboard-https.rule: Host(`example.com`) && PathPrefix(`/dashboard`)
         traefik.http.routers.dashboard-https.entrypoints: https
         traefik.http.routers.dashboard-https.tls: "true"
         traefik.http.routers.dashboard-https.tls.certresolver: le
         traefik.http.services.dashboard.loadbalancer.server.port: 9000
-        traefik.http.middlewares.stripprefix-admin.stripprefix.prefixes: /admin
+        traefik.http.middlewares.stripprefix-admin.stripprefix.prefixes: /dashboard
         # Security Headers
         traefik.http.middlewares.dashboard-headers.headers.framedeny: "true"
         traefik.http.middlewares.dashboard-headers.headers.sslredirect: "true"
@@ -205,6 +198,7 @@ services:
     networks:
       - saleor-backend-tier
     volumes:
+      # TODO: redis data is available at /data so this setup does NOT save redis info. Link or fix permission issue.
       - type: bind
         source: /gluster/volume1/saleor-redis
         target: /home/docker/data
@@ -254,8 +248,6 @@ services:
       - saleor-backend-tier
     depends_on:
       - redis
-    secrets:
-      - secret_key
     volumes:
       - /app/templates/templated_email/compiled
     environment:
@@ -267,7 +259,7 @@ services:
       # Format: redis://:password@redis:6379/1
       # Password in redis.conf  
       CELERY_BROKER_URL: redis://:kljfsdfiouFOIDSUF789s8dfSDFjksd@redis:6379/1
-      SECRET_KEY: /run/secrets/secret_key
+      SECRET_KEY: ${SECRET_KEY}
       JWT_VERIFY_EXPIRATION: "True"
     deploy:
       replicas: 3
