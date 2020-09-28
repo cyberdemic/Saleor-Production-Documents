@@ -8,7 +8,7 @@ ARG SENTRY_DSN
 ARG SENTRY_APM
 ARG DEMO_MODE
 ARG GTM_ID
-ENV API_URI ${API_URI:-https://example.com/gqlapi/graphql/}
+ENV API_URI ${API_URI:-https://example.com/graphql/}
 RUN API_URI=${API_URI} npm run build
 
 
@@ -23,5 +23,12 @@ RUN chown -R nginx:nginx /app && chmod -R 755 /app && \
     chown -R nginx:nginx /var/run/nginx.pid && \
     touch /var/log/error.log && \
     chown -R nginx:nginx /var/log/error.log
+
+# Trivy Vulnerability scan. Fail if any HIGH or CRITICAL vulnerabilities
+# https://github.com/aquasecurity/trivy
+RUN apk add curl \
+    && curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/master/contrib/install.sh | sh -s -- -b /usr/local/bin \
+    && trivy filesystem --exit-code 1 --severity HIGH,CRITICAL --no-progress /
+
 USER nginx
 COPY --from=builder /app/dist/ /app/
