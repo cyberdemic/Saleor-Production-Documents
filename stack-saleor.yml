@@ -74,20 +74,20 @@ services:
         traefik.enable: "true"
         traefik.docker.network: traefik-public
         traefik.constraint-label: traefik-public
-        traefik.http.routers.api-http.rule: Host(`example.com`) && PathPrefix(`/graphql`)
+        traefik.http.routers.api-http.rule: Host(`example.com`) && PathPrefix(`/api`)
         traefik.http.routers.api-http.entrypoints: http
         traefik.http.routers.api-http.middlewares: https-redirect
-        traefik.http.routers.api-https.rule: Host(`example.com`) && PathPrefix(`/graphql`)
+        traefik.http.routers.api-https.rule: Host(`example.com`) && PathPrefix(`/api`)
         traefik.http.routers.api-https.entrypoints: https
         traefik.http.routers.api-https.tls: "true"
         traefik.http.routers.api-https.tls.certresolver: le
         traefik.http.services.api.loadbalancer.server.port: 8000
-        traefik.http.middlewares.stripprefix-graphql.stripprefix.prefixes: /graphql
+        traefik.http.middlewares.stripprefix-api.stripprefix.prefixes: /api
         # Security Headers
         traefik.http.middlewares.api-headers.headers.framedeny: "true"
         traefik.http.middlewares.api-headers.headers.sslredirect: "true"
         traefik.http.middlewares.api-headers.headers.forceSTSHeader: "true"
-        traefik.http.routers.api-https.middlewares: api-headers,stripprefix-graphql@docker
+        traefik.http.routers.api-https.middlewares: api-headers,stripprefix-api@docker
 
 
   storefront:
@@ -97,7 +97,7 @@ services:
       dockerfile: ./Dockerfile
     image: docker_hub_name/storefront_image_name 
     environment:
-      API_URI: "https://example.com/graphql/"
+      API_URI: "https://example.com/api/graphql/"
     networks:
       - traefik-public
     volumes:
@@ -141,7 +141,7 @@ services:
       dockerfile: ./Dockerfile
     image: docker_hub_name/dashboard_image_name 
     environment:
-      API_URI: "https://example.com/graphql/"
+      API_URI: "https://example.com/api/graphql/"
       APP_MOUNT_URI: "/dashboard/" 
       STATIC_URL: "/dashboard/" 
     volumes:
