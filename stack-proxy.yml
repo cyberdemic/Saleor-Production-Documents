@@ -71,14 +71,8 @@ services:
         delay: 10s
         max_attempts: 5
         window: 60s
-      # TODO: optimize limits
-      resources:
-        limits:
-          cpus: '0.20'
-          memory: 150M
-        reservations:
-          cpus: '0.10'
-          memory: 50M
+      # optionally add resource limits
+      # https://docs.docker.com/compose/compose-file/#resources
       labels:
         # Enable Traefik for this service, to make it available in the public network
         - traefik.enable=true
