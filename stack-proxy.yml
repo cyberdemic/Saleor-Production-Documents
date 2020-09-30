@@ -49,11 +49,9 @@ services:
       - --certificatesresolvers.le.acme.storage=/certificates/acme.json
       # Use the TLS Challenge for Let's Encrypt
       - --certificatesresolvers.le.acme.tlschallenge=true
-
       ##### TESTING ONLY
       - --certificatesresolvers.le.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory
       ##### TESTING ONLY
-
       # Enable the access log, with HTTP requests
       - --accesslog
       # Enable the Traefik log, for configurations and errors
@@ -87,13 +85,10 @@ services:
         - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
         - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
         # traefik-http set up only to use the middleware to redirect to https
-        # Uses the environment variable DOMAIN
         - traefik.http.routers.traefik-public-http.rule=Host(`traefik.staging.dandeesales.com`)
         - traefik.http.routers.traefik-public-http.entrypoints=http
         - traefik.http.routers.traefik-public-http.middlewares=https-redirect
-
         # traefik-https the actual router using HTTPS
-        # Uses the environment variable DOMAIN
         - traefik.http.routers.traefik-public-https.rule=Host(`traefik.example.com`)
         - traefik.http.routers.traefik-public-https.entrypoints=https
         - traefik.http.routers.traefik-public-https.tls=true
