@@ -30,13 +30,6 @@ RUN apt-get update \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
-
-# Trivy Vulnerability scan. Fail if any HIGH or CRITICAL vulnerabilities
-# https://github.com/aquasecurity/trivy
-RUN apt-get install -y curl \
-  && curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/master/contrib/install.sh | sh -s -- -b /usr/local/bin \
-  && trivy filesystem --exit-code 1 --severity HIGH,CRITICAL --no-progress /
-
 RUN mkdir -p /app/media /app/static \
   && chown -R saleor:saleor /app/
 
@@ -44,6 +37,12 @@ COPY --from=build-python /usr/local/lib/python3.8/site-packages/ /usr/local/lib/
 COPY --from=build-python /usr/local/bin/ /usr/local/bin/
 COPY . /app
 WORKDIR /app
+
+# Trivy Vulnerability scan. Fail if any HIGH or CRITICAL vulnerabilities
+# https://github.com/aquasecurity/trivy
+RUN apt-get install -y curl \
+  && curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/master/contrib/install.sh | sh -s -- -b /usr/local/bin \
+  && trivy filesystem --exit-code 1 --severity HIGH,CRITICAL --no-progress /
 
 ARG ALLOWED_CLIENT_HOSTS
 ENV ALLOWED_CLIENT_HOSTS ${ALLOWED_CLIENT_HOSTS:-example.com}
