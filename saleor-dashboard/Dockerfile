@@ -23,6 +23,8 @@ RUN chown -R nginx:nginx /app && chmod -R 755 /app && \
     touch /var/log/error.log && \
     chown -R nginx:nginx /var/log/error.log
 
+COPY --from=builder /app/build/ /app/
+
 # Trivy Vulnerability scan. Fail if any HIGH or CRITICAL vulnerabilities
 # https://github.com/aquasecurity/trivy
 RUN apk add curl \
@@ -30,4 +32,3 @@ RUN apk add curl \
     && trivy filesystem --exit-code 1 --severity HIGH,CRITICAL --no-progress /
 
 USER nginx
-COPY --from=builder /app/build/ /app/
