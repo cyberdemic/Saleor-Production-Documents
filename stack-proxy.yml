@@ -85,7 +85,7 @@ services:
         - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
         - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
         # traefik-http set up only to use the middleware to redirect to https
-        - traefik.http.routers.traefik-public-http.rule=Host(`traefik.staging.dandeesales.com`)
+        - traefik.http.routers.traefik-public-http.rule=Host(`traefik.example.com`)
         - traefik.http.routers.traefik-public-http.entrypoints=http
         - traefik.http.routers.traefik-public-http.middlewares=https-redirect
         # traefik-https the actual router using HTTPS
